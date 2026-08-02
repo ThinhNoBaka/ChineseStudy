@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>学中文 · Học Từ Vựng Tiếng Trung</title>
+<meta name="description" content="Ứng dụng học từ vựng tiếng Trung từ file Excel, với thuật toán lặp lại ngắt quãng thông minh." />
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;600;700&family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<!-- SEAL STAMP overlay used to celebrate a mastered word -->
+<div id="seal-stamp" class="seal-stamp" aria-hidden="true">
+  <svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="54"/><text x="60" y="72" text-anchor="middle">识</text></svg>
+</div>
+
+<header class="app-header">
+  <div class="brand">
+    <span class="brand-mark">学</span>
+    <span class="brand-name">ChineseStudy</span>
+  </div>
+  <div class="header-actions">
+    <button id="btn-settings" class="icon-btn" aria-label="Cài đặt" title="Cài đặt">
+      <svg viewBox="0 0 24 24" width="20" height="20"><path d="M12 15.5a3.5 3.5 0 100-7 3.5 3.5 0 000 7z" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M19.4 13.5a1.7 1.7 0 00.34 1.87l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.7 1.7 0 00-1.87-.34 1.7 1.7 0 00-1.03 1.56V19.5a2 2 0 11-4 0v-.09a1.7 1.7 0 00-1.03-1.56 1.7 1.7 0 00-1.87.34l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.7 1.7 0 00.34-1.87 1.7 1.7 0 00-1.56-1.03H4.5a2 2 0 110-4h.09A1.7 1.7 0 006.16 8.4a1.7 1.7 0 00-.34-1.87l-.06-.06A2 2 0 118.6 3.63l.06.06a1.7 1.7 0 001.87.34H10.6A1.7 1.7 0 0011.6 2.6V2.5a2 2 0 114 0v.09a1.7 1.7 0 001.03 1.56 1.7 1.7 0 001.87-.34l.06-.06a2 2 0 112.83 2.83l-.06.06a1.7 1.7 0 00-.34 1.87v.03a1.7 1.7 0 001.56 1.03h.09a2 2 0 110 4h-.09a1.7 1.7 0 00-1.56 1.03z" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg>
+    </button>
+    <button id="btn-dark" class="icon-btn" aria-label="Chuyển giao diện tối" title="Chế độ tối">
+      <svg viewBox="0 0 24 24" width="20" height="20"><path d="M20 14.5A8.5 8.5 0 019.5 4 8.5 8.5 0 1020 14.5z" fill="currentColor"/></svg>
+    </button>
+  </div>
+</header>
+
+<main id="app">
+
+  <!-- ============ UPLOAD SCREEN ============ -->
+  <section id="screen-upload" class="screen active">
+    <div class="upload-card">
+      <div class="upload-seal">印</div>
+      <h1>Học từ vựng tiếng Trung</h1>
+      <p class="subtitle">Tải lên file Excel (Chữ Hán · Pinyin · Nghĩa tiếng Việt) để bắt đầu.</p>
+
+      <label for="file-input" class="dropzone" id="dropzone">
+        <svg viewBox="0 0 24 24" width="32" height="32"><path d="M12 16V4M12 4l-4 4M12 4l4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M4 16v3a2 2 0 002 2h12a2 2 0 002-2v-3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        <span class="dz-title">Kéo thả hoặc bấm để chọn file</span>
+        <span class="dz-sub">.xlsx · .xls · .csv</span>
+      </label>
+      <input type="file" id="file-input" accept=".xlsx,.xls,.csv" hidden />
+
+      <p id="upload-error" class="upload-error" role="alert" aria-live="polite"></p>
+
+      <div id="resume-panel" class="resume-panel" hidden>
+        <p>Bạn có một phiên học đang dang dở.</p>
+        <div class="resume-actions">
+          <button id="btn-resume" class="btn btn-primary">Tiếp tục học</button>
+          <button id="btn-new-session" class="btn btn-ghost">Bắt đầu phiên mới</button>
+        </div>
+      </div>
+
+      <div id="lesson-select-panel" class="lesson-select-panel" hidden>
+        <h2>Chọn bài học</h2>
+        <div id="lesson-select-list" class="lesson-select-list"></div>
+      </div>
+
+      <div id="mode-select-panel" class="mode-select-panel" hidden>
+        <div class="mode-select-top">
+          <h2 id="mode-select-heading">Chọn chế độ học</h2>
+          <button id="btn-change-lesson" class="link-btn" type="button" hidden>Đổi bài học</button>
+        </div>
+        <div class="mode-grid">
+          <button class="mode-card" data-start="all">
+            <strong>Học toàn bộ</strong>
+            <span id="count-all">0 từ</span>
+          </button>
+          <button class="mode-card" data-start="wrong">
+            <strong>Ôn từ đã sai</strong>
+            <span id="count-wrong">0 từ</span>
+          </button>
+          <button class="mode-card" data-start="starred">
+            <strong>Ôn từ đánh dấu ⭐</strong>
+            <span id="count-starred">0 từ</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div id="deck-history-panel" class="deck-history-panel" hidden>
+      <h2>Lịch sử file đã tải</h2>
+      <div id="deck-history-list" class="deck-history-list"></div>
+    </div>
+  </section>
+
+  <!-- ============ QUIZ SCREEN ============ -->
+  <section id="screen-quiz" class="screen">
+    <div class="quiz-topbar">
+      <div class="quiz-progress-wrap">
+        <div class="quiz-meta">
+          <span id="progress-text">Câu 0 / 0</span>
+          <span class="dot">·</span>
+          <span id="mode-indicator">Hán → Việt</span>
+          <span class="dot">·</span>
+          <span id="shuffle-indicator">Xáo trộn: Bật</span>
+        </div>
+        <div class="progress-bar-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" id="progress-bar-track">
+          <div class="progress-bar-fill" id="progress-bar-fill"></div>
+        </div>
+      </div>
+      <div class="quiz-timer" id="quiz-timer">00:00</div>
+    </div>
+
+    <div class="quiz-body">
+      <div class="card" id="vocab-card">
+        <button id="btn-star" class="star-btn" aria-label="Đánh dấu từ khó" aria-pressed="false">
+          <svg viewBox="0 0 24 24" width="22" height="22"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87L18.18 21 12 17.77 5.82 21 7 14.14 2 9.27l6.91-1.01L12 2z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
+        </button>
+
+        <div class="card-prompt" id="card-prompt" lang="zh">邮局</div>
+
+        <div class="card-answer-block">
+          <input
+            type="text"
+            id="answer-input"
+            class="answer-input"
+            autocomplete="off"
+            autocapitalize="off"
+            spellcheck="false"
+            aria-label="Nhập câu trả lời"
+            placeholder="Nhập câu trả lời..."
+          />
+
+          <div id="input-tools" class="input-tools" hidden>
+            <button type="button" id="btn-toggle-pinyin" class="tool-btn" aria-pressed="false">
+              拼 Bàn phím Pinyin
+            </button>
+            <button type="button" id="btn-toggle-handwrite" class="tool-btn" aria-pressed="false">
+              ✍ Tập viết tay
+            </button>
+          </div>
+
+          <div id="pinyin-panel" class="tool-panel" hidden>
+            <input
+              type="text"
+              id="pinyin-search"
+              class="pinyin-search-input"
+              autocomplete="off"
+              autocapitalize="off"
+              spellcheck="false"
+              placeholder="Gõ pinyin không dấu, vd: yiyuan"
+            />
+            <div id="pinyin-candidates" class="pinyin-candidates"></div>
+            <p id="pinyin-empty" class="pinyin-empty" hidden>Không tìm thấy chữ nào khớp trong bộ từ này.</p>
+          </div>
+
+          <div id="handwrite-panel" class="tool-panel" hidden>
+            <canvas id="handwrite-canvas" width="320" height="180" aria-label="Bảng vẽ luyện chữ Hán"></canvas>
+            <div class="handwrite-actions">
+              <p class="hw-hint">Vẽ để luyện nhớ mặt chữ — không tự nhận diện thành văn bản. Hãy gõ đáp án ở ô phía trên hoặc dùng Pinyin.</p>
+              <button type="button" id="btn-clear-hw" class="btn btn-ghost">Xóa nét vẽ</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="card-feedback" id="card-feedback" hidden>
+          <div class="feedback-badge" id="feedback-badge"></div>
+          <div class="feedback-detail">
+            <div class="fd-row"><span class="fd-label">Chữ Hán</span><span id="fd-hanzi" lang="zh"></span></div>
+            <div class="fd-row"><span class="fd-label">Pinyin</span><span id="fd-pinyin"></span></div>
+            <div class="fd-row"><span class="fd-label">Nghĩa</span><span id="fd-vi"></span></div>
+          </div>
+        </div>
+
+        <div class="card-actions">
+          <button id="btn-check" class="btn btn-primary btn-lg">Kiểm tra</button>
+          <button id="btn-next" class="btn btn-primary btn-lg" hidden>Tiếp theo →</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ SUMMARY SCREEN ============ -->
+  <section id="screen-summary" class="screen">
+    <div class="summary-card">
+      <div class="summary-seal">完</div>
+      <h1>Hoàn thành phiên học!</h1>
+      <div class="summary-grid" id="summary-grid"></div>
+      <div class="summary-actions">
+        <button id="btn-study-wrong-again" class="btn btn-primary">Học lại từ sai</button>
+        <button id="btn-back-home" class="btn btn-ghost">Về trang chủ</button>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<!-- ============ SETTINGS PANEL ============ -->
+<div id="settings-overlay" class="overlay" hidden></div>
+<aside id="settings-panel" class="settings-panel" aria-hidden="true">
+  <div class="settings-header">
+    <h2>Cài đặt</h2>
+    <button id="btn-close-settings" class="icon-btn" aria-label="Đóng">
+      <svg viewBox="0 0 24 24" width="20" height="20"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+    </button>
+  </div>
+
+  <div class="settings-body">
+    <div class="setting-row">
+      <label for="setting-mode">Chiều câu hỏi</label>
+      <select id="setting-mode">
+        <option value="cn-vi">Hán → Việt</option>
+        <option value="vi-cn">Việt → Hán</option>
+      </select>
+    </div>
+
+    <div class="setting-row">
+      <label for="setting-shuffle">Xáo trộn thứ tự</label>
+      <label class="switch">
+        <input type="checkbox" id="setting-shuffle" />
+        <span class="switch-track"><span class="switch-thumb"></span></span>
+      </label>
+    </div>
+
+    <div class="setting-row">
+      <label for="setting-darkmode">Chế độ tối</label>
+      <label class="switch">
+        <input type="checkbox" id="setting-darkmode" />
+        <span class="switch-track"><span class="switch-thumb"></span></span>
+      </label>
+    </div>
+
+    <div class="setting-row">
+      <label for="setting-fontsize">Cỡ chữ thẻ từ</label>
+      <select id="setting-fontsize">
+        <option value="small">Nhỏ</option>
+        <option value="medium">Vừa</option>
+        <option value="large">Lớn</option>
+      </select>
+    </div>
+
+    <div class="setting-row">
+      <label for="setting-delay">Từ sai quay lại sau</label>
+      <select id="setting-delay">
+        <option value="3">3 câu</option>
+        <option value="5">5 câu</option>
+        <option value="8">8 câu</option>
+        <option value="10">10 câu</option>
+      </select>
+    </div>
+
+    <hr />
+
+    <button id="btn-upload-new" class="btn btn-ghost btn-block">Tải file Excel khác</button>
+    <button id="btn-reset-progress" class="btn btn-danger-ghost btn-block">Xóa toàn bộ tiến độ</button>
+  </div>
+</aside>
+
+<div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script type="module" src="app.js"></script>
+</body>
+</html>
