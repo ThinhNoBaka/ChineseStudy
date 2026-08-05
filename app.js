@@ -25,6 +25,10 @@ let currentLessonId = 'ALL';
 let session = null;
 let timerInterval = null;
 let handwritingPad = null;
+/** @type {boolean} whether we are in a wrong-word review session */
+let isWrongReview = false;
+/** @type {string} which word pool we started with ('all', 'wrong', 'starred') */
+let currentPool = 'all';
 
 // ---------------------------------------------------------------------
 // Boot
@@ -63,6 +67,27 @@ function loadDeck(deckId) {
   lessons = deriveLessons(vocab);
   Storage.setActiveDeckId(deckId);
 
+  // Check for incomplete wrong-word review session first
+  const wrongSessionData = Storage.getDeckWrongSession(deckId);
+  if (wrongSessionData) {
+    if (confirm('Bạn có phiên ôn từ sai chưa hoàn thành. Tiếp tục?')) {
+      // Restore the wrong-word review session
+      session = new QuizSession(vocab, wrongSessionData);
+      isWrongReview = true;
+      currentPool = 'wrongLastSession';
+      // Clear the stored wrong-word list because it's now a session
+      Storage.clearDeckWrongLastSessionIds(deckId);
+      UI.showScreen('quiz');
+      startTimerLoop();
+      renderCurrentCard();
+      return;
+    } else {
+      Storage.clearDeckWrongSession(deckId);
+      Storage.clearDeckWrongLastSessionIds(deckId);
+    }
+  }
+
+  // Normal session check
   const savedSession = Storage.getDeckSession(deckId);
   El.resumePanel.hidden = !savedSession;
   currentLessonId = (savedSession && savedSession.lessonId) || 'ALL';
@@ -176,6 +201,9 @@ function bindUploadEvents() {
 
   El.btnNewSession.addEventListener('click', () => {
     Storage.clearDeckSession(activeDeckId);
+    // Also clear wrong-word leftovers if starting a fresh session
+    Storage.clearDeckWrongLastSessionIds(activeDeckId);
+    Storage.clearDeckWrongSession(activeDeckId);
     El.resumePanel.hidden = true;
   });
 
@@ -241,8 +269,15 @@ function startSession(pool, restore = null) {
     return;
   }
   session = new QuizSession(words, restore);
+  isWrongReview = false;
+  currentPool = pool;
+  // Clear wrong-word list when starting a fresh normal session
+  if (pool === 'all' && !restore) {
+    Storage.clearDeckWrongLastSessionIds(activeDeckId);
+    Storage.clearDeckWrongSession(activeDeckId);
+  }
   session.startTimer();
-  Storage.setDeckSession(activeDeckId, { ...session.serialize(), lessonId: currentLessonId });
+  persistSession(); // save immediately
   touchDeckLastStudied(activeDeckId);
 
   UI.showScreen('quiz');
@@ -251,7 +286,11 @@ function startSession(pool, restore = null) {
 }
 
 function persistSession() {
-  Storage.setDeckSession(activeDeckId, { ...session.serialize(), lessonId: currentLessonId });
+  if (isWrongReview) {
+    Storage.setDeckWrongSession(activeDeckId, session.serialize());
+  } else {
+    Storage.setDeckSession(activeDeckId, { ...session.serialize(), lessonId: currentLessonId });
+  }
 }
 
 function renderCurrentCard() {
@@ -271,38 +310,59 @@ function finishSession() {
   stopTimerLoop();
   const summary = session.summary();
   Review.recordSessionStats(summary);
-  UI.renderSummary(summary);
-  Storage.clearDeckSession(activeDeckId);
+
+  let wrongCount = 0;
+  if (!isWrongReview && currentPool === 'all') {
+    // Only store wrong list for normal sessions (pool === 'all')
+    const wrongIds = session.getWrongWordIds();
+    if (wrongIds.length > 0) {
+      Storage.setDeckWrongLastSessionIds(activeDeckId, wrongIds);
+    }
+    wrongCount = wrongIds.length;
+    Storage.clearDeckSession(activeDeckId);
+  } else {
+    // Wrong-review session or other special pool: clear its own session data
+    if (isWrongReview) {
+      Storage.clearDeckWrongSession(activeDeckId);
+      isWrongReview = false;
+      currentPool = 'all';
+    } else {
+      // For 'wrong' or 'starred' pools, we do not store a "wrong list"
+      Storage.clearDeckSession(activeDeckId);
+    }
+  }
+
+  UI.renderSummary(summary, wrongCount);
   UI.showScreen('summary');
 }
 
 // ---------------------------------------------------------------------
-// Answer checking
+// Wrong-word review of the last session
 // ---------------------------------------------------------------------
 
-function handleCheck() {
-  const settings = Settings.get();
-  const word = session.peekCurrent();
-  if (!word) return;
-
-  const typed = El.answerInput.value;
-  const expected = settings.mode === 'cn-vi' ? word.vi : word.hanzi;
-  const isCorrect = checkAnswer(typed, expected, settings.mode);
-
-  const result = session.submitAnswer(isCorrect);
-
-  if (isCorrect) {
-    Review.clearWrong(activeDeckId, word.id);
-  } else {
-    Review.recordWrong(activeDeckId, word.id);
+function startWrongLastSession() {
+  const ids = Storage.getDeckWrongLastSessionIds(activeDeckId);
+  if (!ids || ids.length === 0) {
+    UI.showToast('Không có từ sai nào để ôn.');
+    return;
+  }
+  const words = vocab.filter((w) => ids.includes(w.id));
+  if (words.length === 0) {
+    UI.showToast('Không tìm thấy từ tương ứng.');
+    return;
   }
 
-  persistSession();
-  UI.renderFeedback(result.isCorrect, word);
-  UI.renderProgress(session, settings.mode, settings.shuffle);
-}
+  // Create a new session with the wrong words
+  session = new QuizSession(words);
+  isWrongReview = true;
+  currentPool = 'wrongLastSession';
+  Storage.setDeckWrongSession(activeDeckId, session.serialize());
+  // Remove the stored list because we now have a session
+  Storage.clearDeckWrongLastSessionIds(activeDeckId);
 
-function handleNext() {
+  session.startTimer();
+  UI.showScreen('quiz');
+  startTimerLoop();
   renderCurrentCard();
 }
 
@@ -446,6 +506,45 @@ function bindQuizEvents() {
     renderDeckHistory();
     UI.showScreen('upload');
   });
+
+  // Handle the "review wrong from last session" button
+  document.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-action="review-wrong-last"]');
+    if (btn) {
+      e.preventDefault();
+      startWrongLastSession();
+    }
+  });
+}
+
+// ---------------------------------------------------------------------
+// Answer checking
+// ---------------------------------------------------------------------
+
+function handleCheck() {
+  const settings = Settings.get();
+  const word = session.peekCurrent();
+  if (!word) return;
+
+  const typed = El.answerInput.value;
+  const expected = settings.mode === 'cn-vi' ? word.vi : word.hanzi;
+  const isCorrect = checkAnswer(typed, expected, settings.mode);
+
+  const result = session.submitAnswer(isCorrect);
+
+  if (isCorrect) {
+    Review.clearWrong(activeDeckId, word.id);
+  } else {
+    Review.recordWrong(activeDeckId, word.id);
+  }
+
+  persistSession();
+  UI.renderFeedback(result.isCorrect, word);
+  UI.renderProgress(session, settings.mode, settings.shuffle);
+}
+
+function handleNext() {
+  renderCurrentCard();
 }
 
 // ---------------------------------------------------------------------

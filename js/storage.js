@@ -80,6 +80,16 @@ export const Storage = {
   getDeckWrong: (deckId) => get(deckKey(deckId, 'wrong'), []),
   setDeckWrong: (deckId, ids) => set(deckKey(deckId, 'wrong'), ids),
 
+  // ---- NEW: wrong-word list of the most recently finished session ----
+  getDeckWrongLastSessionIds: (deckId) => get(deckKey(deckId, 'wrongIdsLastSession'), []),
+  setDeckWrongLastSessionIds: (deckId, ids) => set(deckKey(deckId, 'wrongIdsLastSession'), ids),
+  clearDeckWrongLastSessionIds: (deckId) => remove(deckKey(deckId, 'wrongIdsLastSession')),
+
+  // ---- NEW: separate session storage for wrong-word review -----------
+  getDeckWrongSession: (deckId) => get(deckKey(deckId, 'wrongSession'), null),
+  setDeckWrongSession: (deckId, session) => set(deckKey(deckId, 'wrongSession'), session),
+  clearDeckWrongSession: (deckId) => remove(deckKey(deckId, 'wrongSession')),
+
   deleteDeck: (deckId) => {
     const prefix = deckPrefix(deckId);
     allLocalKeys().forEach((k) => {

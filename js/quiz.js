@@ -157,6 +157,14 @@ export class QuizSession {
     };
   }
 
+  /**
+   * Returns an array of word IDs that were answered incorrectly at least once
+   * during this session.
+   */
+  getWrongWordIds() {
+    return Object.keys(this.wordStats).filter((id) => this.wordStats[id].missedOnce === true);
+  }
+
   serialize() {
     return {
       queue: this.queue,

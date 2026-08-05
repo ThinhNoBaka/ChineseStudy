@@ -302,7 +302,7 @@ export function renderTimer(seconds) {
   El.timer.textContent = `${m}:${s}`;
 }
 
-export function renderSummary(summary) {
+export function renderSummary(summary, wrongCount = 0) {
   const stats = [
     { label: 'Tổng số từ', value: summary.totalWords },
     { label: 'Đúng ngay lần đầu', value: summary.correctFirstTry },
@@ -318,6 +318,28 @@ export function renderSummary(summary) {
       <div class="stat-label">${s.label}</div>
     </div>
   `).join('');
+
+  // Action buttons container - only show "Ôn lại từ sai của phiên này"
+  let actions = document.getElementById('summary-actions');
+  if (!actions) {
+    actions = document.createElement('div');
+    actions.id = 'summary-actions';
+    actions.style.marginTop = '1.5rem';
+    actions.style.display = 'flex';
+    actions.style.flexDirection = 'column';
+    actions.style.alignItems = 'center';
+    actions.style.gap = '0.75rem';
+    El.summaryGrid.parentNode.appendChild(actions);
+  }
+  actions.innerHTML = '';
+  
+  if (wrongCount > 0) {
+    const btn = document.createElement('button');
+    btn.textContent = `Ôn lại ${wrongCount} từ sai của phiên này`;
+    btn.className = 'btn-review-wrong';
+    btn.dataset.action = 'review-wrong-last';
+    actions.appendChild(btn);
+  }
 }
 
 function formatDuration(sec) {

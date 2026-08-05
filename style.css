@@ -910,3 +910,35 @@ body[data-fontsize="large"]  { --card-font-scale: 1.25; }
 @supports (padding: max(0px)) {
   main#app { padding-bottom: max(60px, env(safe-area-inset-bottom)); }
 }
+
+
+/* Nút ôn lại từ sai của phiên này */
+.btn-review-wrong {
+  border-radius: 50px;
+  padding: 14px 40px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  background: #f97316;
+  color: white;
+  border: none;
+  cursor: pointer;
+  width: 100%;
+  max-width: 420px;
+  transition: background 0.2s, transform 0.1s;
+  box-shadow: 0 4px 12px rgba(249, 115, 22, 0.3);
+}
+
+.btn-review-wrong:hover,
+.btn-review-wrong:focus-visible {
+  background: #ea580c;
+  transform: scale(1.02);
+}
+
+.btn-review-wrong:active {
+  transform: scale(0.98);
+}
+
+/* Dark mode support */
+[data-theme="dark"] .btn-review-wrong {
+  box-shadow: 0 4px 12px rgba(249, 115, 22, 0.5);
+}
