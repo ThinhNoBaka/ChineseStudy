@@ -30,6 +30,10 @@ let handwritingPad = null;
 let isWrongReview = false;
 /** @type {string} which word pool we started with ('all', 'wrong', 'starred') */
 let currentPool = 'all';
+/** @type {Object|null} the word object currently shown on the card — kept
+ *  separate from session.peekCurrent() because submitAnswer() shifts the
+ *  queue immediately on check, before the "Next" button is pressed. */
+let currentWord = null;
 
 // ---------------------------------------------------------------------
 // Boot
@@ -301,6 +305,7 @@ function renderCurrentCard() {
     finishSession();
     return;
   }
+  currentWord = word;
   UI.renderProgress(session, settings.mode, settings.shuffle);
   UI.renderCard(word, settings.mode, Review.isStarred(activeDeckId, word.id));
   El.btnSpeak.classList.add('playing');
@@ -497,17 +502,15 @@ function bindQuizEvents() {
   });
 
   El.btnStar.addEventListener('click', () => {
-    const word = session.peekCurrent();
-    if (!word) return;
-    const starred = Review.toggleStar(activeDeckId, word.id);
+    if (!currentWord) return;
+    const starred = Review.toggleStar(activeDeckId, currentWord.id);
     El.btnStar.setAttribute('aria-pressed', String(starred));
   });
 
   El.btnSpeak.addEventListener('click', () => {
-    const word = session.peekCurrent();
-    if (!word) return;
+    if (!currentWord) return;
     El.btnSpeak.classList.add('playing');
-    speak(word.hanzi, 'zh-CN', { onEnd: () => El.btnSpeak.classList.remove('playing') });
+    speak(currentWord.hanzi, 'zh-CN', { onEnd: () => El.btnSpeak.classList.remove('playing') });
   });
 
   El.btnStudyWrongAgain.addEventListener('click', () => startSession('wrong'));
@@ -533,7 +536,7 @@ function bindQuizEvents() {
 
 function handleCheck() {
   const settings = Settings.get();
-  const word = session.peekCurrent();
+  const word = currentWord;
   if (!word) return;
 
   const typed = El.answerInput.value;
