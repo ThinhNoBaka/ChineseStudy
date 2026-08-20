@@ -523,6 +523,25 @@ main#app {
 .star-btn[aria-pressed="true"] { color: var(--gold); }
 .star-btn[aria-pressed="true"] svg path { fill: var(--gold); }
 
+.speak-btn {
+  position: absolute;
+  top: 18px;
+  left: 18px;
+  background: transparent;
+  border: none;
+  color: var(--ink-faint);
+  padding: 8px;
+  border-radius: 50%;
+  transition: color 0.2s ease, transform 0.15s ease, background 0.2s ease;
+}
+.speak-btn:hover { color: var(--seal); background: var(--seal-soft); transform: scale(1.1); }
+.speak-btn:active { transform: scale(0.95); }
+.speak-btn.playing { color: var(--seal); animation: speakPulse 0.9s ease-in-out infinite; }
+@keyframes speakPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.55; }
+}
+
 .card-prompt {
   font-family: var(--font-cjk);
   font-size: calc(52px * var(--card-font-scale));

@@ -4,7 +4,7 @@
 // card appears. No external service, no API key — this only works if the
 // browser ships a zh-CN voice (all major desktop/mobile browsers do).
 
-export function speak(text, lang = 'zh-CN') {
+export function speak(text, lang = 'zh-CN', callbacks = {}) {
   if (!text) return;
   if (!('speechSynthesis' in window)) return;
   try {
@@ -12,9 +12,12 @@ export function speak(text, lang = 'zh-CN') {
     const utter = new SpeechSynthesisUtterance(text);
     utter.lang = lang;
     utter.rate = 0.85;
+    if (callbacks.onStart) utter.onstart = callbacks.onStart;
+    if (callbacks.onEnd) { utter.onend = callbacks.onEnd; utter.onerror = callbacks.onEnd; }
     window.speechSynthesis.speak(utter);
   } catch (err) {
     // Speech isn't essential to the app — fail silently.
     console.warn('speech synthesis failed', err);
+    if (callbacks.onEnd) callbacks.onEnd();
   }
 }

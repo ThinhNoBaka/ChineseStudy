@@ -39,6 +39,7 @@ export const El = {
   cardPrompt: $('#card-prompt'),
   answerInput: $('#answer-input'),
   btnStar: $('#btn-star'),
+  btnSpeak: $('#btn-speak'),
   cardFeedback: $('#card-feedback'),
   feedbackBadge: $('#feedback-badge'),
   fdHanzi: $('#fd-hanzi'),

@@ -303,7 +303,8 @@ function renderCurrentCard() {
   }
   UI.renderProgress(session, settings.mode, settings.shuffle);
   UI.renderCard(word, settings.mode, Review.isStarred(activeDeckId, word.id));
-  speak(word.hanzi); // read the word aloud every time a new card appears
+  El.btnSpeak.classList.add('playing');
+  speak(word.hanzi, 'zh-CN', { onEnd: () => El.btnSpeak.classList.remove('playing') }); // read the word aloud every time a new card appears
   if (handwritingPad) handwritingPad.clear();
   session.startTimer();
 }
@@ -500,6 +501,13 @@ function bindQuizEvents() {
     if (!word) return;
     const starred = Review.toggleStar(activeDeckId, word.id);
     El.btnStar.setAttribute('aria-pressed', String(starred));
+  });
+
+  El.btnSpeak.addEventListener('click', () => {
+    const word = session.peekCurrent();
+    if (!word) return;
+    El.btnSpeak.classList.add('playing');
+    speak(word.hanzi, 'zh-CN', { onEnd: () => El.btnSpeak.classList.remove('playing') });
   });
 
   El.btnStudyWrongAgain.addEventListener('click', () => startSession('wrong'));
