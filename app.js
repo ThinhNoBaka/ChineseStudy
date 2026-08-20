@@ -9,6 +9,7 @@ import { QuizSession, checkAnswer } from './js/quiz.js';
 import { Review } from './js/review.js';
 import { searchByPinyin } from './js/pinyin.js';
 import { initHandwritingPad } from './js/handwriting.js';
+import { speak } from './js/speech.js';
 import * as UI from './js/ui.js';
 
 const { El } = UI;
@@ -302,6 +303,7 @@ function renderCurrentCard() {
   }
   UI.renderProgress(session, settings.mode, settings.shuffle);
   UI.renderCard(word, settings.mode, Review.isStarred(activeDeckId, word.id));
+  speak(word.hanzi); // read the word aloud every time a new card appears
   if (handwritingPad) handwritingPad.clear();
   session.startTimer();
 }
